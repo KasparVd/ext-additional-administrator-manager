@@ -1,0 +1,198 @@
+<?php echo $this->form; ?>
+<?php if ($this->resendUrl): ?>
+<script type="text/javascript">
+    // "Resend invitation" link on the edit page: POST with Plesk's CSRF token, then reload the edit page.
+    (function () {
+        var link = document.getElementById('aam-resend-invitation');
+        if (!link) {
+            return;
+        }
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (link.getAttribute('aria-disabled') === 'true') {
+                return;
+            }
+            link.setAttribute('aria-disabled', 'true');
+
+            var tokenMeta = document.querySelector('meta[name="forgery_protection_token"]');
+            var token = tokenMeta ? tokenMeta.getAttribute('content') : '';
+            fetch(<?php echo json_encode($this->resendUrl); ?>, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-Forgery-Protection-Token': token
+                },
+                body: 'forgery_protection_token=' + encodeURIComponent(token)
+            }).then(function (response) {
+                return response.json();
+            }).then(function (data) {
+                window.location.href = data && data.redirect ? data.redirect : window.location.href;
+            }).catch(function () {
+                window.location.reload();
+            });
+        });
+    })();
+</script>
+<?php endif; ?>
+<?php if ($this->passwordTools): ?>
+<script type="text/javascript">
+    // Password tools on the edit page, built from Plesk's own components the way Plesk's native forms use them:
+    // strength meter (Plesk's estimation), generator (server policy), show/hide, plus a copy button.
+    // Save is disabled while the password is below the server's minimum strength or the confirmation differs;
+    // Plesk still enforces its policy when the account is saved.
+    (function () {
+        var config = <?php echo json_encode([
+            'policy' => $this->passwordTools['policy'],
+            'minimumLevel' => $this->passwordTools['minimumLevel'],
+            'text' => [
+                'generate' => $this->lmsg('buttonGeneratePassword'),
+                'generateLabel' => $this->lmsg('buttonGeneratePasswordLabel'),
+                'show' => $this->lmsg('buttonShowPassword'),
+                'hide' => $this->lmsg('buttonHidePassword'),
+                'showLabel' => $this->lmsg('buttonShowPasswordLabel'),
+                'copy' => $this->lmsg('buttonCopyPassword'),
+                'copyLabel' => $this->lmsg('buttonCopyPasswordLabel'),
+                'copied' => $this->lmsg('messagePasswordCopied'),
+                'copyFailed' => $this->lmsg('errorPasswordCopy'),
+                'tooWeak' => $this->lmsg('errorPasswordTooWeak'),
+                'mismatch' => $this->lmsg('errorPasswordMismatch'),
+            ],
+        ]); ?>;
+        var text = config.text;
+        var password = document.getElementById('password');
+        var confirmation = document.getElementById('password_confirm');
+        var passwordRow = document.getElementById('password-form-row');
+        if (!password || !confirmation || !passwordRow || typeof Jsw === 'undefined') {
+            return;
+        }
+
+        passwordRow.insertAdjacentHTML('afterend',
+            '<div id="password-buttons-form-row" class="form-row">'
+            + '<div class="field-name"></div>'
+            + '<div class="field-value">'
+            + '<button type="button" id="password-generate-button" class="btn"></button> '
+            + '<button type="button" id="password-show-button" class="btn"></button> '
+            + '<button type="button" id="password-copy-button" class="btn"></button> '
+            + '<span id="password-copy-status" class="hint" role="status" aria-live="polite"></span>'
+            + '</div></div>');
+
+        try {
+            new Jsw.PasswordMeter({
+                renderTo: 'password',
+                renderMode: 'after',
+                observe: 'password',
+                userInputs: ['contact', 'email']
+            });
+        } catch (e) {
+            // Without the meter the form still works; Plesk checks the password when saving.
+        }
+
+        new Jsw.CommandButton({applyTo: 'password-generate-button', title: text.generate, name: 'password-generate-button', 'aria-label': text.generateLabel});
+        new Jsw.CommandButton({applyTo: 'password-show-button', title: text.show, name: 'password-show-button', 'aria-label': text.showLabel});
+        new Jsw.CommandButton({applyTo: 'password-copy-button', title: text.copy, name: 'password-copy-button', 'aria-label': text.copyLabel});
+        new Jsw.PasswordGenerator({
+            id: 'password-generator-password',
+            password: 'password',
+            passwordConfirmation: 'password_confirm',
+            generateButton: 'password-generate-button',
+            showButton: 'password-show-button',
+            showPasswordTitle: text.show,
+            hidePasswordTitle: text.hide,
+            passwordStrength: config.policy || ''
+        });
+
+        // Copy to clipboard.
+        var copyStatus = document.getElementById('password-copy-status');
+        var copyTimer = null;
+        function showCopyStatus(message) {
+            copyStatus.textContent = message;
+            clearTimeout(copyTimer);
+            copyTimer = setTimeout(function () {
+                copyStatus.textContent = '';
+            }, 3000);
+        }
+        document.getElementById('password-copy-button').addEventListener('click', function (event) {
+            event.preventDefault();
+            if (password.value === '') {
+                return;
+            }
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(password.value).then(function () {
+                    showCopyStatus(text.copied);
+                }, function () {
+                    showCopyStatus(text.copyFailed);
+                });
+            } else {
+                showCopyStatus(text.copyFailed);
+            }
+        });
+
+        // Strength and confirmation checks.
+        var levels = {'very-weak': 0, 'weak': 1, 'medium': 2, 'strong': 3, 'very-strong': 4};
+        function meterLevel() {
+            var meter = document.getElementById('password-meter');
+            var match = meter && meter.className.match(/\bpassword-strength-(very-weak|weak|medium|strong|very-strong)\b/);
+            return match ? levels[match[1]] : null;
+        }
+
+        // Same markup Plesk's own forms use for field errors.
+        function setFieldError(input, message) {
+            var row = input.closest('.form-row');
+            var errors = row ? row.querySelector('.field-errors') : null;
+            if (!errors) {
+                return;
+            }
+            errors.innerHTML = '';
+            if (message) {
+                var hint = document.createElement('span');
+                hint.className = 'error-hint';
+                hint.textContent = message;
+                errors.appendChild(hint);
+            }
+            errors.style.display = message ? '' : 'none';
+            row.classList.toggle('error', !!message);
+        }
+
+        function check() {
+            var level = meterLevel();
+            // A blank password keeps the current one. An unknown rating (meter not ready) is left to Plesk's check on save.
+            var tooWeak = password.value !== '' && config.minimumLevel !== null && level !== null && level < config.minimumLevel;
+            var mismatch = confirmation.value !== password.value;
+
+            setFieldError(password, tooWeak ? text.tooWeak : '');
+            // Only complain about the confirmation once something was typed into it.
+            setFieldError(confirmation, mismatch && confirmation.value !== '' ? text.mismatch : '');
+
+            var save = Jsw.getComponent('btn-send');
+            if (save) {
+                if (tooWeak || mismatch) {
+                    save.disable();
+                } else {
+                    save.enable();
+                }
+            }
+            return !(tooWeak || mismatch);
+        }
+
+        ['input', 'keyup', 'change', 'dataavailable', 'plesk:passwordGenerated'].forEach(function (type) {
+            password.addEventListener(type, check);
+            confirmation.addEventListener(type, check);
+        });
+        // The meter's rating arrives asynchronously; re-check whenever it changes.
+        var meterElement = document.getElementById('password-meter');
+        if (meterElement && window.MutationObserver) {
+            new MutationObserver(check).observe(meterElement, {attributes: true, attributeFilter: ['class']});
+        }
+        // Enter in a field submits the form without the Save button.
+        password.form.addEventListener('submit', function (event) {
+            if (!check()) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+        check();
+    })();
+</script>
+<?php endif; ?>

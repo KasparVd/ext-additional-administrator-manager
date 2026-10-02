@@ -1,0 +1,39 @@
+/* Additions to Plesk's login page styles for the invited administrator setup page. */
+
+.login-page__inner {
+    --login-bg-color: #4b4b4b;
+}
+.aam-brand {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+.login-page__content .pul-form-field {
+    margin-bottom: 16px;
+}
+.login-page__content .pul-form-field__label {
+    margin-bottom: 4px;
+}
+
+/* Generate / Copy below the password field. */
+.aam-password-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+.aam-copy-status {
+    font-size: 12px;
+}
+
+/* Strength popover (Plesk UI library popover, positioned by setup.js). */
+#password-strength-popover ul {
+    margin: 4px 0 8px;
+    padding-left: 20px;
+}
+
+/* Optional help link (panel.ini: helpArticle). */
+.aam-help {
+    margin-top: 16px;
+}

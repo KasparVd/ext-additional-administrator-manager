@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<module>
+    <id>additional-administrator-manager</id>
+    <name>Additional Administrator Manager</name>
+    <description>Invite, list, edit and remove additional Plesk administrator accounts.</description>
+    <category>server_tool</category>
+    <category>auth</category>
+    <version>1.0.0</version>
+    <release>1</release>
+    <vendor>Kaspar van Dalfsen</vendor>
+    <url>https://github.com/KasparVd/ext-additional-administrator-manager</url>
+    <plesk_min_version>18.0.0</plesk_min_version>
+</module>

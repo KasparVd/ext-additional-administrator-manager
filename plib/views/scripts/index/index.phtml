@@ -1,0 +1,19 @@
+<?php echo $this->renderList($this->list); ?>
+<script type="text/javascript">
+    // Handlers for the "More" pull-down operations defined in IndexController::_getList().
+    (function () {
+        var listId = <?php echo json_encode($this->list->getId()); ?>;
+        var urls = {
+            buttonActivateAdminAlias: <?php echo json_encode(pm_Context::getActionUrl('index', 'activate')); ?>,
+            buttonInactiveAdminAlias: <?php echo json_encode(pm_Context::getActionUrl('index', 'suspend')); ?>
+        };
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest && event.target.closest('a[id]');
+            if (!button || !urls.hasOwnProperty(button.id)) {
+                return;
+            }
+            event.preventDefault();
+            Jsw.getComponent(listId).execGroupOperation({url: urls[button.id], skipConfirmation: true});
+        });
+    })();
+</script>

@@ -1,0 +1,188 @@
+<?php
+/**
+ * Setup page for invited administrators, rendered by Modules_AdditionalAdministratorManager_SetupPage.
+ *
+ * @var callable    $e              HTML escaper
+ * @var callable    $lmsg           Locale message in the page's language
+ * @var callable    $t              Escaped locale message
+ * @var string      $lang           Language code of the page's texts
+ * @var string      $assets         URL of htdocs/public/
+ * @var string      $logoUrl        URL of the server's custom logo, or of the Plesk logo
+ * @var bool        $invalid        True if the token is missing, unknown or expired
+ *
+ * Only for a valid link:
+ * @var string      $token          The invitation token from the link
+ * @var string      $username       Value of the username field
+ * @var array       $errors         Error messages keyed by field name
+ * @var string|null $passwordPolicy Minimum password strength as server_pref reports it
+ * @var int|null    $minimumLevel   The same as a meter level (0-4)
+ */
+$fieldClass = function ($name) use (&$errors) {
+    return 'pul-form-field' . (isset($errors[$name]) ? ' pul-form-field--error' : '');
+};
+$helpLink = function () use ($e, $t) {
+    $url = Modules_AdditionalAdministratorManager_Settings::helpArticle();
+    if ($url === '') {
+        return '';
+    }
+    return '<p class="aam-help"><span class="pul-action pul-action--size-16"><a href="' . $e($url) . '" target="_blank" rel="noopener noreferrer" class="pul-action__content">'
+        . '<span class="pul-icon pul-icon--size-16 pul-action__icon" aria-hidden="true"><svg focusable="false"><use href="/ui-library/images/symbols.svg#question-mark-circle:16"></use></svg></span>'
+        . $t('setupHelp') . '</a></span></p>';
+};
+$fieldError = function ($name) use (&$errors, $e) {
+    return isset($errors[$name]) ? '<div class="pul-form-field__error" id="' . $e($name) . '-error">' . $e($errors[$name]) . '</div>' : '';
+};
+?><!DOCTYPE html>
+<html lang="<?php echo $e($lang); ?>" dir="ltr" class="sid-plesk" data-theme="contrast">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title><?php echo $t('setupPageTitle'); ?></title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="stylesheet" href="/ui-library/plesk-ui-library.css?<?php echo $e(pm_ProductInfo::getVersion()); ?>">
+    <link rel="stylesheet" href="/cp/theme/css/main.css?<?php echo $e(pm_ProductInfo::getVersion()); ?>">
+    <link rel="stylesheet" href="<?php echo $e($assets); ?>setup.css">
+</head>
+<body class="sid-login">
+<div class="login-page">
+    <div class="pul-layout pul-layout--simplified login-page__inner login-page__background login-page__background--fill">
+        <div class="pul-layout__inner">
+            <header class="pul-layout__header">
+                <div class="pul-layout__header-inner">
+                    <div class="login-page-header flex--main-center">
+                        <div class="login-page-header__brand aam-brand"><span class="brand"><img class="brand__logo" src="<?php echo $e($logoUrl); ?>" alt="<?php echo $e(Modules_AdditionalAdministratorManager_Mailer::hostname()); ?>"></span></div>
+                    </div>
+                </div>
+            </header>
+            <div class="pul-layout__container">
+                <div class="pul-layout__content">
+                    <main class="pul-layout__main">
+                        <div class="pul-layout__main-inner">
+                            <div id="main" class="login-page__content">
+    <?php if ($invalid): ?>
+                                <h3 class="pul-heading pul-heading--h3"><?php echo $t('setupInvalidTitle'); ?></h3>
+                                <p><?php echo $t('setupInvalidText'); ?></p>
+                                <p><a href="/login_up.php"><?php echo $t('setupGoToLogin'); ?></a></p>
+                                <?php echo $helpLink(); ?>
+    <?php else: ?>
+                                <h3 class="pul-heading pul-heading--h3"><?php echo $t('setupTitle'); ?></h3>
+                                <p><?php echo $t('setupIntro'); ?></p>
+                                <form method="post" action="?auth=<?php echo $e(rawurlencode($token)); ?>" class="login-page__form" id="aam-setup-form" autocomplete="off" novalidate>
+                                    <div class="pul-section-item pul-section-item--vertical pul-form-field pul-form-field-text">
+                                        <div class="pul-section-item__title">
+                                            <div class="pul-form-field__label">
+                                                <label for="username"><?php echo $t('fieldLogin'); ?> <span class="pul-form__required"></span></label>
+                                            </div>
+                                        </div>
+                                        <div class="pul-section-item__value">
+                                            <span class="pul-input pul-input--size-fill">
+                                                <input class="pul-input__input" type="text" id="username" name="username"
+                                                    value="<?php echo $e($username); ?>" maxlength="<?php echo Modules_AdditionalAdministratorManager_AdminAlias::LOGIN_MAX_LENGTH; ?>"
+                                                    required autocomplete="username" autocapitalize="none" spellcheck="false">
+                                            </span>
+                                        </div>
+                                        <?php echo $fieldError('username'); ?>
+                                        <div class="pul-form-field__description"><?php echo $t('setupLoginHint', ['max' => Modules_AdditionalAdministratorManager_AdminAlias::LOGIN_MAX_LENGTH]); ?></div>
+                                    </div>
+
+                                    <div class="pul-section-item pul-section-item--vertical pul-form-field pul-form-field-text" id="password-field">
+                                        <div class="pul-section-item__title">
+                                            <div class="pul-form-field__label">
+                                                <label for="password"><?php echo $t('fieldPassword'); ?> <span class="pul-form__required"></span></label>
+                                            </div>
+                                        </div>
+                                        <div class="pul-section-item__value">
+                                            <span class="pul-input pul-input--size-fill pul-input--affix">
+                                                <input class="pul-input__input" type="password" id="password" name="password"
+                                                    maxlength="<?php echo Modules_AdditionalAdministratorManager_SetupPage::PASSWORD_MAX_LENGTH; ?>"
+                                                    required autocomplete="new-password">
+                                                <span class="pul-input__suffix">
+                                                    <button type="button" class="pul-button pul-button--ghost pul-button--empty" id="password-show" aria-controls="password" aria-label="<?php echo $t('labelShowPassword'); ?>">
+                                                        <span class="pul-button__inner"><span class="pul-icon pul-icon--size-16 pul-button__icon" aria-hidden="true"><svg focusable="false"><use href="/ui-library/images/symbols.svg#eye-closed:16"></use></svg></span></span>
+                                                    </button>
+                                                </span>
+                                            </span>
+                                            <div class="aam-password-buttons">
+                                                <button type="button" class="pul-button" id="password-generate" aria-label="<?php echo $t('buttonGeneratePasswordLabel'); ?>">
+                                                    <span class="pul-button__inner"><?php echo $t('buttonGeneratePassword'); ?></span>
+                                                </button>
+                                                <button type="button" class="pul-button" id="password-copy" aria-label="<?php echo $t('buttonCopyPasswordLabel'); ?>">
+                                                    <span class="pul-button__inner"><?php echo $t('buttonCopyPassword'); ?></span>
+                                                </button>
+                                                <span id="password-copy-status" class="aam-copy-status" role="status" aria-live="polite"></span>
+                                            </div>
+                                        </div>
+                                        <?php echo $fieldError('password'); ?>
+                                    </div>
+
+                                    <div class="pul-section-item pul-section-item--vertical pul-form-field pul-form-field-text" id="password_confirm-field">
+                                        <div class="pul-section-item__title">
+                                            <div class="pul-form-field__label">
+                                                <label for="password_confirm"><?php echo $t('fieldPasswordConfirm'); ?> <span class="pul-form__required"></span></label>
+                                            </div>
+                                        </div>
+                                        <div class="pul-section-item__value">
+                                            <span class="pul-input pul-input--size-fill">
+                                                <input class="pul-input__input" type="password" id="password_confirm" name="password_confirm"
+                                                    maxlength="<?php echo Modules_AdditionalAdministratorManager_SetupPage::PASSWORD_MAX_LENGTH; ?>"
+                                                    required autocomplete="new-password">
+                                            </span>
+                                        </div>
+                                        <?php echo $fieldError('password_confirm'); ?>
+                                    </div>
+
+                                    <div class="pul-form__footer">
+                                        <button type="submit" id="aam-setup-submit" class="pul-button pul-button--primary pul-button--lg pul-button--fill login-page__login-button">
+                                            <span class="pul-button__inner"><?php echo $t('setupSubmit'); ?></span>
+                                        </button>
+                                    </div>
+                                </form>
+                                <?php echo $helpLink(); ?>
+    <?php endif; ?>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php if (!$invalid): ?>
+<?php
+// Settings for setup.js. A JSON data block, because the page's Content-Security-Policy allows no inline scripts.
+// Texts under "plesk" are replaced by Plesk's own wording (loaded live from /cp/locale, in the page's language) when available.
+$setupConfig = [
+    'policy' => $passwordPolicy,
+    'minimumLevel' => $minimumLevel,
+    'estimateUrl' => '?auth=' . rawurlencode($token),
+    'localeUrl' => '/cp/locale?sections%5B%5D=components.password&locale=' . rawurlencode($lang),
+    'plesk' => [
+        'meter.verdictVeryWeak' => $lmsg('meterVerdictVeryWeak'),
+        'meter.verdictWeak' => $lmsg('meterVerdictWeak'),
+        'meter.verdictMedium' => $lmsg('meterVerdictMedium'),
+        'meter.verdictStrong' => $lmsg('meterVerdictStrong'),
+        'meter.verdictVeryStrong' => $lmsg('meterVerdictVeryStrong'),
+        'meter.description' => $lmsg('meterDescription'),
+        'meter.yourPasswordIsStrong' => $lmsg('meterYourPasswordIsStrong'),
+        'generator.generate' => $lmsg('buttonGeneratePassword'),
+    ],
+    'text' => [
+        'showPassword' => $lmsg('labelShowPassword'),
+        'hidePassword' => $lmsg('labelHidePassword'),
+        'strengthIs' => $lmsg('meterStrengthIs'),
+        'required' => $lmsg('meterRequired'),
+        'close' => $lmsg('buttonClose'),
+        'copied' => $lmsg('messagePasswordCopied'),
+        'copyFailed' => $lmsg('errorPasswordCopy'),
+        'tooWeak' => $lmsg('errorPasswordTooWeak'),
+        'mismatch' => $lmsg('errorPasswordMismatch'),
+    ],
+];
+?>
+<script type="application/json" id="aam-setup-config"><?php echo json_encode($setupConfig, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
+<script src="<?php echo $e($assets); ?>setup.js"></script>
+<?php endif; ?>
+</body>
+</html>

@@ -1,0 +1,16 @@
+Hello {contact_name},
+
+You have been invited to become an administrator of the Plesk server {hostname}.
+
+To accept the invitation, open the link below and choose your username and password:
+
+{setup_url}
+
+This link is personal and can be used once. It expires on {expires}.
+If the link has expired, ask the administrator who invited you to send the invitation again.
+
+If you were not expecting this invitation, you can ignore this email. No account will be
+activated unless the link above is used.
+
+--
+This message was sent automatically by the Plesk server {hostname}.
